@@ -1,0 +1,14 @@
+-struct type for stages with each stage
+-Hash table using the 8-3 bits ass array addresses,
+    *for changing size of predicion table, add or take away a bit from instruction to store
+    *2-bit predictor stores 0-3, 1 bit 0 or 1
+?proffessor will be emailed about how to handle and instruction flow, finding brancing instructions
+    *Changing type to "squashed" when a branch prediciton in incorrect
+-forwardng can just come from reading instructions from the above struct
+
+?Is there any difference in execution between IF1/IF2, and MEM1/MEM2?
+
+-function
+    *Detecting hazards
+        #Write back harzard (insert no-op before reading register)
+        #ALU Hazards (Looking ahead at memory)

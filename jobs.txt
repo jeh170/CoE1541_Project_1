@@ -1,0 +1,4 @@
+-Hazard Detection Method  -- Ronen
+ *3 hazards
+-Branch Prediction and Reaction  -- Jim
+  *3 modes

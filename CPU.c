@@ -6,9 +6,12 @@
 ***************************************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include <arpa/inet.h>
 #include "CPU.h" 
+
+struct trace_item stages[7];
 
 int main(int argc, char **argv)
 {
@@ -62,6 +65,17 @@ int main(int argc, char **argv)
       t_PC = tr_entry->PC;
       t_Addr = tr_entry->Addr;
     }  
+
+    int hazard_detected = hazard_detect(*stages);
+
+    if (hazard_detected == 0){
+      for (int i = 6; i > 0; i--){
+      }
+    }
+
+    stages[0] = *tr_entry; 
+
+    branch_predict(*stages);
 
 // SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
 // IN ONE CYCLE

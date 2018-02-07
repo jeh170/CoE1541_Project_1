@@ -12,3 +12,51 @@
     *Detecting hazards
         #Write back harzard (insert no-op before reading register)
         #ALU Hazards (Looking ahead at memory)
+        
+        
+        struct Stages {
+	struct trace_item IF1;
+	// etc
+}
+
+void push(struct *Stages) {
+	boolean hazards = false;
+	// hazard detection method
+	if (boolean hazards == true) //don't push
+	else //push
+}
+
+boolean hazardDetect(struct *stages, boolean *hazards) {
+	// check structural hazard
+	// if true, stall first 3 stages, set boolean to true
+	// check data hazard
+	// if true, stall first 3 stages, set boolean to true
+	// check branching hazard
+	// if true, flush first 3 stages, boolean doesn't matter?
+}
+
+/* Stage notes
+	IF1 = branch prediction, stallable/flushable
+	IF2 = stallable/flushable
+	ID  = stallable/flushable, can conflict w/ WB
+	EX = hazard if has LW, check branch/jump condition
+	MEM1 = hazard if has LW
+	MEM2 = hazard if has LW
+	WB = conflict w/ ID if writing occurs
+*/
+
+boolean branchPredict(struct trace_item instr) {
+	// check table
+	// if in table, check prediction 
+	// if not in table, add to table, set prediction to "not taken"
+}
+
+void updatePredict(struct trace_item instr) {
+	
+}
+
+int prediction_method; // == 0, 1, or 2
+struct trace_item[] predictionTable = malloc(sizeof(struct trace_item) * sizeOfTable);
+short[] predictions = malloc(sizeof(short) * sizeOfTable);	// entries == 0,1 if prediction_method == 1
+		// entries == 0 to 3 if prediction_method == 2;
+		// don't need if prediction_method == 0;

@@ -66,7 +66,7 @@ int main(int argc, char **argv)
       t_Addr = tr_entry->Addr;
     }  
 
-    int hazard_detected = hazard_detect(*stages);
+    int hazard_detected = hazard_detect(*stages);  //TODO: NEEDS TO BE DEFINED
 
     if (hazard_detected == 0){
       for (int i = 6; i > 0; i--){
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 
     stages[0] = *tr_entry; 
 
-    branch_predict(*stages);
+    branch_predict(*stages);  //TODO: NEEDS TO BE DEFINED
 
 // SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
 // IN ONE CYCLE

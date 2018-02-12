@@ -23,8 +23,8 @@ int check_branch_taken_TEST(){
     if2.PC = 1234;
     id.Addr = 1234;
 
-    stages[1] = if2;
-    stages[2] = id;
+    stages[2] = if2;
+    stages[3] = id;
 
     if (check_branch(stages))
         return -1;
@@ -37,11 +37,10 @@ int check_branch_nottaken_TEST(){
     if2.PC = 1234;
     id.Addr = 4321;
 
-    stages[1] = if2;
-    stages[2] = id;
+    stages[2] = if2;
+    stages[3] = id;
 
     if (!check_branch(stages))
         return -1;
     return 0;
 }
-

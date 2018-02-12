@@ -5,7 +5,6 @@
 // this is tpts
 enum trace_item_type {
 	ti_NOP = 0,
-
 	ti_RTYPE,
 	ti_ITYPE,
 	ti_LOAD,

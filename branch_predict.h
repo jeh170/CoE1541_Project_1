@@ -23,8 +23,8 @@ static int table_size;
 
 int flush_stages(struct trace_item stages[]);
 int check_branch(const struct trace_item stages[]);
-int get_store_prediction(const struct trace_item stages[], int mode);
-int check_prediction(const struct trace_item stages[], int branch_result, int mode);
+int get_prediction(const struct trace_item stages[], int mode);
+int check_store_prediction(const struct trace_item stages[], int branch_result, int mode);
 
 void set_up_table(int size)
 {
@@ -34,23 +34,29 @@ void set_up_table(int size)
 
 // predicts whether a branch will be taken, affecting what gets loaded into the pipeline
 // 0 -> not taken, 1 -> taken
-int branch_predict(struct trace_item stages[], int mode){
+int branch_predict(struct trace_item stages[], int mode)
+{
     if (stages[0].type == ti_BRANCH)
-        return get_store_prediction(stages, mode);
+        return get_prediction(stages, mode);
     return 1;
 }
 
-int branch_check(struct trace_item stages[], int mode){
+int branch_check(struct trace_item stages[], int mode)
+{
     if (stages[3].type == ti_BRANCH)
     {
         int branch_result = check_branch(stages);
-        if (!check_prediction(stages, branch_result, mode))
+        if (!check_store_prediction(stages, branch_result, mode))
             flush_stages(stages);
     }
 }
 
+
+/*Utility Methods*/
+
 // flushes stages in the event of an incorrect prediction
-int flush_stages(struct trace_item stages[]){
+int flush_stages(struct trace_item stages[])
+{
     for (int i = 0; i < 4; i++){
         stages[i] = FLUSHED;
     }
@@ -59,7 +65,8 @@ int flush_stages(struct trace_item stages[]){
 }
 
 // Returns 1 if to be taken, 0 if not to be taken
-int check_branch(const struct trace_item stages[]){
+int check_branch(const struct trace_item stages[])
+{
     int target_addr = stages[3].Addr;
     int next_addr = stages[2].PC;
 
@@ -68,14 +75,18 @@ int check_branch(const struct trace_item stages[]){
     return 0;
 }
 
+//Hashes address for table
 int hash_for_table(int addr)
 {
     return (addr >> 3) % table_size;
 }
 
 // Gets the prediciton for this branch or stores a new one
-int get_store_prediction(const struct trace_item stages[], int mode){
-    int addr = hash_for_table(stages[0].PC);
+int get_prediction(const struct trace_item stages[], int mode)
+{
+    int addr;
+    if (mode != 0) 
+        addr = hash_for_table(stages[0].PC);
     
     switch (mode){
         case 0:
@@ -89,7 +100,8 @@ int get_store_prediction(const struct trace_item stages[], int mode){
 
 // The prediction in order to determine flushing
 // Returns -1 if prediciton was correct, 0 if not
-int check_prediction(const struct trace_item stages[], int branch_result, int mode){
+int check_store_prediction(const struct trace_item stages[], int branch_result, int mode)
+{
     int addr = hash_for_table(stages[0].PC);
 
     if (mode == 0)

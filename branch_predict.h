@@ -4,9 +4,16 @@
 #include <arpa/inet.h>
 #include "CPU.h" 
 
-enum branch_result {
-    br_NOT_TAKEN = 0,
-    br_TAKEN
+enum branch_result_1bit {
+    br1_NOT_TAKEN = 0,
+    br1_TAKEN
+};
+
+enum branch_result_2bit{
+    br2_NOT_TAKEN = 0,
+    br2_NOT_TAKEN_FAIL,
+    br2_TAKEN_FAIL,
+    br2_TAKEN
 };
 
 const struct trace_item FLUSHED = { .type = ti_FLUSHED };
@@ -76,11 +83,12 @@ int get_store_prediction(const struct trace_item stages[], int mode){
         case 1:
             return prediciton_table[addr];
         case 2:
-            return 0; //TODO: add prediciton table
+            return prediciton_table[addr] > 1;
     }
 }
 
 // The prediction in order to determine flushing
+// Returns -1 if prediciton was correct, 0 if not
 int check_prediction(const struct trace_item stages[], int branch_result, int mode){
     int addr = hash_for_table(stages[0].PC);
 
@@ -91,14 +99,30 @@ int check_prediction(const struct trace_item stages[], int branch_result, int mo
             int prediction = prediciton_table[addr];
             if (branch_result == prediction)
                 return -1;
-            else
-            {
+            else{
                 prediciton_table[addr] = branch_result;
                 return 0;
             }
         case 2:
-            return 0;
+            int prediction = prediciton_table[addr];
+            int prediciton_outcome = prediction > 1;
+            int predict_check = branch_result == prediciton_outcome;
+
+            if (predict_check){
+                if (prediciton_outcome)
+                    prediciton_table[addr] = br2_TAKEN;
+                else
+                    prediciton_table[addr] = br2_NOT_TAKEN;
+            }
+            else{
+                if (prediciton_outcome)
+                    prediciton_table[addr] = br2_TAKEN_FAIL;
+                else
+                    prediciton_table[addr] = br2_NOT_TAKEN_FAIL;
+            }
+            return predict_check;
+        default:
+            return branch_result == 0;
     }
     
-    return branch_result == 0;
 }

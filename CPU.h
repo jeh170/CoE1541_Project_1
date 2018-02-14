@@ -16,6 +16,23 @@ enum trace_item_type {
 	ti_FLUSHED
 };
 
+enum stage_type {
+	IF1 = 0,
+	IF2,
+	ID,
+	EX,
+	MEM1,
+	MEM2,
+	WB
+};
+
+enum hazard_type {
+	hz_STRUCT = 1,
+	hz_DATA1,
+	hz_DATA2,
+	hz_CTRL
+};
+
 struct trace_item {
 	unsigned char type;			// see above
 	unsigned char sReg_a;			// 1st operand
@@ -110,4 +127,40 @@ int write_trace(struct trace_item item, char *fname)
 	return 1;
 }
 
+int hazard_detect(struct trace_item *stages) {
+	int detected = 0;
+	// check for structural hazard (instr trying to WB while decoding)
+	if ((stages[WB]->type >= ti_RTYPE) && (stages[WB]->type <= ti_LOAD)) {
+		// Stall IF1, IF2, ID
+//		for (int i = WB; i > ID; i--) {
+//			stages[i] = stages[i-1];	// push non-stalled instrs down pipeline
+//		}
+//		stages[EX]->type = ti_NOP;	// insert nop to stall pipeline
+		detected = hz_STRUCT;
+	}
 
+	// check for data hazard (LW in EX/MEM1 or MEM1/MEM2 w/ data dependency in ID/EX)
+	if (stages[EX]->type == ti_LOAD) { 	// which stage to check from depends on how we load the pipeline
+		if (stages[EX]->dReg == stages[ID]->dReg) {
+			// Stall IF1, IF2, ID
+			detected = hz_DATA1;
+		}
+	}
+	else if (stages[MEM1]->type == ti_LOAD) {
+		if (stages[MEM1]->dReg == stages[ID]->dReg) {
+			// Stall IF1, IF2, ID
+			detected = hz_DATA2;
+		}
+	}
+
+	// check for control hazard (if hazard while branch/jump in EX, flush first 3 instrs)
+	if (stages[EX]->type == ti_BRANCH) {
+		if (stages[EX]->Addr != stages[ID]->PC) {	// Branch was not taken
+			// check prediction
+			// if wrong, correct prediction
+			// squash/flush instrs in IF1, IF2, ID as needed
+		}
+	}
+
+	return detected;
+}

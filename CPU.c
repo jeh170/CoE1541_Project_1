@@ -50,6 +50,18 @@ int main(int argc, char **argv)
   trace_init();
 
   while(1) {
+	/*
+	 * Need to modify the loop to keep buffer of 2(?) instructions
+	 * If pipeline needs to be stalled, we can't push the last read instr
+	 * onto the pipeline or the instr stalled at IF1 will be written over
+	 *
+	 * Need to determine definite order of loop in terms of putting new
+	 * instructions onto the pipeline, resolving hazards, and pushing
+	 * instructions along the pipeline
+	 *
+	 * Depending on how we order this, may need to end up putting hazard
+	 * resolution in the loop instead of just in the method
+	 */
     size = trace_get_item(&tr_entry);
    
     if (!size) {       /* no more instructions (trace_items) to simulate */
@@ -66,13 +78,13 @@ int main(int argc, char **argv)
       t_Addr = tr_entry->Addr;
     }  
 
-    int hazard_detected = hazard_detect(*stages);  //TODO: NEEDS TO BE DEFINED
-
+    int hazard_detected = hazard_detect(*stages);
     if (hazard_detected == 0){
       for (int i = 6; i > 0; i--){
       }
     }
 
+    // can only insert new instr if no hazards, b/c otherwise pipeline is stalled
     stages[0] = *tr_entry; 
 
     branch_predict(*stages);  //TODO: NEEDS TO BE DEFINED

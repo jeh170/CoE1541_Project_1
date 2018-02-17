@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 
 
     /* hazard detection */ 
-    int hazard_detected = hazard_detect(*stages, prediction_mode);    
+    int hazard_detected = hazard_detect(stages, prediction_mode);    
 
     /* branch prediction*/
     branch_predict(stages, prediction_mode);
@@ -98,9 +98,6 @@ int main(int argc, char **argv)
 
     // can only insert new instr if no hazards, b/c otherwise pipeline is stalled
     stages[0] = *tr_entry; 
-
-
-    /* 
 
 // SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
 // IN ONE CYCLE

@@ -127,15 +127,19 @@ int write_trace(struct trace_item item, char *fname)
 	return 1;
 }
 
+int push_stages_from(struct trace_item stages[], int pushFrom) {
+	for (int i = WB; i >= pushFrom; i--) {
+		stages[i] = stages[i-1];	// push non-stalled instrs down pipeline
+	}
+	stages[pushFrom].type = ti_NOP;	// insert nop to stall pipeline
+}
+
 int hazard_detect(struct trace_item stages[], int prediction_mode) {
 	int detected = 0;
 	// check for structural hazard (instr trying to WB while decoding)
 	if ((stages[WB].type >= ti_RTYPE) && (stages[WB].type <= ti_LOAD)) {
 		// Stall IF1, IF2, ID
-//		for (int i = WB; i > ID; i--) {
-//			stages[i] = stages[i-1];	// push non-stalled instrs down pipeline
-//		}
-//		stages[EX]->type = ti_NOP;	// insert nop to stall pipeline
+		push_stages_from(stages, EX);
 		detected = hz_STRUCT;
 	}
 
@@ -143,19 +147,21 @@ int hazard_detect(struct trace_item stages[], int prediction_mode) {
 	if (stages[EX].type == ti_LOAD) { 	// which stage to check from depends on how we load the pipeline
 		if (stages[EX].dReg == stages[ID].dReg) {
 			// Stall IF1, IF2, ID
+			push_stages_from(stages, EX);
 			detected = hz_DATA1;
 		}
 	}
 	else if (stages[MEM1].type == ti_LOAD) {
 		if (stages[MEM1].dReg == stages[ID].dReg) {
 			// Stall IF1, IF2, ID
+			push_stages_from(stages, EX);
 			detected = hz_DATA2;
 		}
 	}
 
 	// check for control hazard (if hazard while branch/jump in EX, flush first 3 instrs)
-	if (stages[EX]->type == ti_BRANCH) {
-		if (stages[EX]->Addr != stages[ID]->PC) {	// Branch was not taken
+	if (stages[EX].type == ti_BRANCH) {
+		if (stages[EX].Addr != stages[ID].PC) {	// Branch was not taken
 			// check prediction
 			// if wrong, correct prediction
 			// squash/flush instrs in IF1, IF2, ID as needed

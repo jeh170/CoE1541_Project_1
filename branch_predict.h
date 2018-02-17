@@ -41,6 +41,7 @@ int branch_predict(struct trace_item stages[], int mode)
     return 1;
 }
 
+// checks the prediction stored and flushes IF1/2 and ID
 int branch_check(struct trace_item stages[], int mode)
 {
     if (stages[3].type == ti_BRANCH)

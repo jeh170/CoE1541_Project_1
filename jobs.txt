@@ -1,4 +1,6 @@
--Hazard Detection Method  -- Ronen
+--Hazard Detection Method  -- Ronen
  *3 hazards
--Branch Prediction and Reaction  -- Jim
+ *for loops for resolving hazards
+xBranch Prediction and Reaction  -- Jim
   *3 modes
+-clean up main loop

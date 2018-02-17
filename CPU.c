@@ -19,6 +19,7 @@ int main(int argc, char **argv)
   size_t size;
   char *trace_file_name;
   int trace_view_on = 0;
+  int prediction_mode;
   
   unsigned char t_type = 0;
   unsigned char t_sReg_a= 0;
@@ -30,13 +31,14 @@ int main(int argc, char **argv)
   unsigned int cycle_number = 0;
 
   if (argc == 1) {
-    fprintf(stdout, "\nUSAGE: tv <trace_file> <switch - any character>\n");
+    fprintf(stdout, "\nUSAGE: tv <trace_file> <prediction_mode> <switch - any character>\n");
     fprintf(stdout, "\n(switch) to turn on or off individual item view.\n\n");
     exit(0);
   }
     
   trace_file_name = argv[1];
-  if (argc == 3) trace_view_on = atoi(argv[2]) ;
+  prediction_mode = atoi(argv[2]);
+  if (argc == 4) trace_view_on = atoi(argv[3]);
 
   fprintf(stdout, "\n ** opening file %s\n", trace_file_name);
 
@@ -62,6 +64,20 @@ int main(int argc, char **argv)
 	 * Depending on how we order this, may need to end up putting hazard
 	 * resolution in the loop instead of just in the method
 	 */
+
+
+    /* hazard detection */ 
+    int hazard_detected = hazard_detect(*stages, prediction_mode);    
+
+    /* branch prediction*/
+    branch_predict(stages, prediction_mode);
+
+
+    if (hazard_detected == 0){
+      for (int i = 6; i > 0; i--){
+      }
+    }
+    /* getting and pushing new instruction*/
     size = trace_get_item(&tr_entry);
    
     if (!size) {       /* no more instructions (trace_items) to simulate */
@@ -78,16 +94,13 @@ int main(int argc, char **argv)
       t_Addr = tr_entry->Addr;
     }  
 
-    int hazard_detected = hazard_detect(*stages);
-    if (hazard_detected == 0){
-      for (int i = 6; i > 0; i--){
-      }
-    }
+    
 
     // can only insert new instr if no hazards, b/c otherwise pipeline is stalled
     stages[0] = *tr_entry; 
 
-    branch_predict(*stages);  //TODO: NEEDS TO BE DEFINED
+
+    /* 
 
 // SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
 // IN ONE CYCLE

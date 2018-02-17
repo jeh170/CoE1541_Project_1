@@ -127,10 +127,10 @@ int write_trace(struct trace_item item, char *fname)
 	return 1;
 }
 
-int hazard_detect(struct trace_item *stages) {
+int hazard_detect(struct trace_item stages[], int prediction_mode) {
 	int detected = 0;
 	// check for structural hazard (instr trying to WB while decoding)
-	if ((stages[WB]->type >= ti_RTYPE) && (stages[WB]->type <= ti_LOAD)) {
+	if ((stages[WB].type >= ti_RTYPE) && (stages[WB].type <= ti_LOAD)) {
 		// Stall IF1, IF2, ID
 //		for (int i = WB; i > ID; i--) {
 //			stages[i] = stages[i-1];	// push non-stalled instrs down pipeline
@@ -140,14 +140,14 @@ int hazard_detect(struct trace_item *stages) {
 	}
 
 	// check for data hazard (LW in EX/MEM1 or MEM1/MEM2 w/ data dependency in ID/EX)
-	if (stages[EX]->type == ti_LOAD) { 	// which stage to check from depends on how we load the pipeline
-		if (stages[EX]->dReg == stages[ID]->dReg) {
+	if (stages[EX].type == ti_LOAD) { 	// which stage to check from depends on how we load the pipeline
+		if (stages[EX].dReg == stages[ID].dReg) {
 			// Stall IF1, IF2, ID
 			detected = hz_DATA1;
 		}
 	}
-	else if (stages[MEM1]->type == ti_LOAD) {
-		if (stages[MEM1]->dReg == stages[ID]->dReg) {
+	else if (stages[MEM1].type == ti_LOAD) {
+		if (stages[MEM1].dReg == stages[ID].dReg) {
 			// Stall IF1, IF2, ID
 			detected = hz_DATA2;
 		}
@@ -159,6 +159,7 @@ int hazard_detect(struct trace_item *stages) {
 			// check prediction
 			// if wrong, correct prediction
 			// squash/flush instrs in IF1, IF2, ID as needed
+			branch_check(stages, prediction_mode);
 		}
 	}
 

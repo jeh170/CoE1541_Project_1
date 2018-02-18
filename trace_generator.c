@@ -5,6 +5,7 @@ and produce a trace file with these instructions readable by CPU.c.
 The program takes the name of the file to be generated as an argument.
 ***************************************************************/
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
 #include <arpa/inet.h>
@@ -26,7 +27,7 @@ int main(int argc, char **argv)
 
   unsigned int cycle_number = 0;
 
-  if (argc == 1) {
+  if (argc < 3) {
     fprintf(stdout, "\nMissing argument: the name of the file to be generated\n");
     exit(0);
   }
@@ -35,21 +36,40 @@ int main(int argc, char **argv)
 	int check;
 int trcount, i, repeat;
 char itype ;
+int sReg_a, sReg_b, dReg;
 
-printf("\nHow many instructions do you want to generate: ");
-scanf("%d ", &trcount );
-printf("\n") ;
+trcount = atoi(argv[2]);
 
 for (i = 0 ; i < trcount ; i++) {
-printf("Enter the fields for instruction %d (PC itype(R|L|S|B) sReg_a sReg_b dReg addr):\n", i);
-scanf("%x %c %c %c %c %x",  &tr_entry->PC, &itype, &tr_entry->sReg_a, &tr_entry->sReg_b, &tr_entry->dReg, &tr_entry->Addr) ;
-repeat = 0 ;
-if(itype == 'R') {tr_entry->type = ti_RTYPE ;} 
-  else if (itype == 'L') {tr_entry->type = ti_LOAD;} 
-  else if (itype == 'S') {tr_entry->type = ti_STORE;} 
-  else if (itype == 'B') {tr_entry->type = ti_BRANCH ;} 
-  else {printf("unrecognized instruction type\n") ; repeat = 1;  i-- ; }
-if (repeat == 0) write_trace(*tr_entry, trace_file_name);
+  printf("Enter the fields for instruction %d (PC itype(R|L|S|B) sReg_a sReg_b dReg addr):\n", i);
+  fflush(stdin);
+  printf("PC: ");
+  scanf("%x",  &tr_entry->PC);
+  fflush(stdin);
+  printf("itype(R|L|S|B): ");
+  scanf(" %c",  &itype);
+  printf("sReg_a: ");
+  scanf("%d",  &sReg_a);
+  tr_entry->sReg_a = sReg_a;
+  printf("sReg_b: ");
+  scanf("%d",  &sReg_b);
+  tr_entry->sReg_b = sReg_b;
+  printf("dReg: ");
+  scanf("%d",  &dReg);
+  tr_entry->dReg = dReg;
+  printf("addr: ");
+  scanf("%x",  &tr_entry->Addr);
+  fflush(stdin);
+  repeat = 0 ;
+  if(itype == 'R') {tr_entry->type = ti_RTYPE ;} 
+    else if (itype == 'L') {tr_entry->type = ti_LOAD;} 
+    else if (itype == 'S') {tr_entry->type = ti_STORE;} 
+    else if (itype == 'B') {tr_entry->type = ti_BRANCH ;} 
+    else if (itype == 'N') {tr_entry->type = ti_NOP;}
+    else {printf("unrecognized instruction type\n") ; repeat = 1;  i-- ; }
+  if (repeat == 0) {
+    write_trace(*tr_entry, trace_file_name);
+  }
 } 
 trace_fd = fopen(trace_file_name, "rb");
 trace_init();

@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "branch_predict.h": "c"
+        "branch_predict.h": "c",
+        "stdlib.h": "c"
     }
 }

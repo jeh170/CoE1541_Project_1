@@ -1,5 +1,5 @@
 #define TEST
-#include "branch_predict.h"
+#include "CPU.h"
 
 int run_test(int (*t)(), int test_num);
 

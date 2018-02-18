@@ -161,12 +161,7 @@ int hazard_detect(struct trace_item stages[], int prediction_mode) {
 
 	// check for control hazard (if hazard while branch/jump in EX, flush first 3 instrs)
 	if (stages[EX].type == ti_BRANCH) {
-		if (stages[EX].Addr != stages[ID].PC) {	// Branch was not taken
-			// check prediction
-			// if wrong, correct prediction
-			// squash/flush instrs in IF1, IF2, ID as needed
 			branch_check(stages, prediction_mode);
-		}
 	}
 
 	return detected;

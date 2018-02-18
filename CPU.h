@@ -127,16 +127,18 @@ int write_trace(struct trace_item item, char *fname)
 	return 1;
 }
 
-int push_stages_from(struct trace_item stages[], int pushFrom) {
+int push_stages_from(struct trace_item stages[], int pushFrom, struct trace_item *out) {
+	out = stages[WB];
 	for (int i = WB; i >= pushFrom; i--) {
 		stages[i] = stages[i-1];	// push non-stalled instrs down pipeline
 	}
 	stages[pushFrom].type = ti_NOP;	// insert nop to stall pipeline
+	return 0;
 }
 
 int branch_check(struct trace_item stages[], int mode);
 
-int hazard_detect(struct trace_item stages[], int prediction_mode) {
+int hazard_detect(struct trace_item stages[], int prediction_mode, struct trace_item* out) {
 	int detected = 0;
 	// check for structural hazard (instr trying to WB while decoding)
 	if ((stages[WB].type >= ti_RTYPE) && (stages[WB].type <= ti_LOAD)) {
@@ -186,7 +188,7 @@ enum branch_result_2bit{
 
 const struct trace_item FLUSHED = { .type = ti_FLUSHED };
 
-static int* prediciton_table; 
+static int* prediction_table;
 static int table_size;
 
 int flush_stages(struct trace_item stages[]);
@@ -197,7 +199,7 @@ int check_store_prediction(const struct trace_item stages[], int branch_result, 
 void set_up_table(int size)
 {
     table_size = size;
-    prediciton_table = (int*)malloc(sizeof(int)*size);
+    prediction_table = (int*)malloc(sizeof(int)*size);
 }
 
 // predicts whether a branch will be taken, affecting what gets loaded into the pipeline
@@ -218,6 +220,7 @@ int branch_check(struct trace_item stages[], int mode)
         if (!check_store_prediction(stages, branch_result, mode))
             flush_stages(stages);
     }
+    return 0;
 }
 
 
@@ -250,7 +253,7 @@ int hash_for_table(int addr)
     return (addr >> 3) % table_size;
 }
 
-// Gets the prediciton for this branch or stores a new one
+// Gets the prediction for this branch or stores a new one
 int get_prediction(const struct trace_item stages[], int mode)
 {
     int addr;
@@ -261,14 +264,15 @@ int get_prediction(const struct trace_item stages[], int mode)
         case 0:
             return 0;
         case 1:
-            return prediciton_table[addr];
+            return prediction_table[addr];
         case 2:
-            return prediciton_table[addr] > 1;
+            return prediction_table[addr] > 1;
     }
+    return 0;
 }
 
 // The prediction in order to determine flushing
-// Returns -1 if prediciton was correct, 0 if not
+// Returns -1 if prediction was correct, 0 if not
 int check_store_prediction(const struct trace_item stages[], int branch_result, int mode)
 {
     int addr = hash_for_table(stages[0].PC);
@@ -276,30 +280,30 @@ int check_store_prediction(const struct trace_item stages[], int branch_result, 
     if (mode == 0)
         return branch_result == 0;
     if (mode == 1){
-        int prediction = prediciton_table[addr];
+        int prediction = prediction_table[addr];
         if (branch_result == prediction)
             return -1;
         else{
-            prediciton_table[addr] = branch_result;
+            prediction_table[addr] = branch_result;
             return 0;
         }
     }
     if (mode == 2){
-        int prediction = prediciton_table[addr];
-        int prediciton_outcome = prediction > 1;
-        int predict_check = branch_result == prediciton_outcome;
+        int prediction = prediction_table[addr];
+        int prediction_outcome = prediction > 1;
+        int predict_check = branch_result == prediction_outcome;
 
         if (predict_check){
-            if (prediciton_outcome)
-                prediciton_table[addr] = br2_TAKEN;
+            if (prediction_outcome)
+                prediction_table[addr] = br2_TAKEN;
             else
-                prediciton_table[addr] = br2_NOT_TAKEN;
+                prediction_table[addr] = br2_NOT_TAKEN;
         }
         else{
-            if (prediciton_outcome)
-                prediciton_table[addr] = br2_TAKEN_FAIL;
+            if (prediction_outcome)
+                prediction_table[addr] = br2_TAKEN_FAIL;
             else
-                prediciton_table[addr] = br2_NOT_TAKEN_FAIL;
+                prediction_table[addr] = br2_NOT_TAKEN_FAIL;
         }
         return predict_check;
     }

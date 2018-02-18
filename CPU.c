@@ -16,6 +16,7 @@ struct trace_item stages[7];
 int main(int argc, char **argv)
 {
   struct trace_item *tr_entry;
+  struct trace_item *out;
   size_t size;
   char *trace_file_name;
   int trace_view_on = 0;
@@ -52,19 +53,6 @@ int main(int argc, char **argv)
   trace_init();
 
   while(1) {
-	/*
-	 * Need to modify the loop to keep buffer of 2(?) instructions
-	 * If pipeline needs to be stalled, we can't push the last read instr
-	 * onto the pipeline or the instr stalled at IF1 will be written over
-	 *
-	 * Need to determine definite order of loop in terms of putting new
-	 * instructions onto the pipeline, resolving hazards, and pushing
-	 * instructions along the pipeline
-	 *
-	 * Depending on how we order this, may need to end up putting hazard
-	 * resolution in the loop instead of just in the method
-	 */
-
 
     /* hazard detection */ 
     int hazard_detected = hazard_detect(stages, prediction_mode);    
@@ -72,38 +60,36 @@ int main(int argc, char **argv)
     /* branch prediction*/
     branch_predict(stages, prediction_mode);
 
-
     if (hazard_detected == 0){
-      for (int i = 6; i > 0; i--){
+      out = stages[WB];
+      for (int i = WB; i > 0; i--){
+    	  stages[i] = stages[i-1];
+      }
+
+      size = trace_get_item(&tr_entry);
+
+      if (!size) {
+        if (stages[WB] == NULL) {
+          printf("+ Simulation terminates at cycle : %u\n", cycle_number);
+          break;
+        }
+        stages[IF1] = NULL;
+      }
+      else {
+    	  cycle_number++;
+    	  t_type = tr_entry->type;
+    	  t_sReg_a = tr_entry->sReg_a;
+    	  t_sReg_b = tr_entry->sReg_b;
+    	  t_dReg = tr_entry->dReg;
+    	  t_PC = tr_entry->PC;
+    	  t_Addr = tr_entry->Addr;
+    	  stages[IF1] = tr_entry;
       }
     }
-    /* getting and pushing new instruction*/
-    size = trace_get_item(&tr_entry);
-   
-    if (!size) {       /* no more instructions (trace_items) to simulate */
-      printf("+ Simulation terminates at cycle : %u\n", cycle_number);
-      break;
-    }
-    else{              /* parse the next instruction to simulate */
-      cycle_number++;
-      t_type = tr_entry->type;
-      t_sReg_a = tr_entry->sReg_a;
-      t_sReg_b = tr_entry->sReg_b;
-      t_dReg = tr_entry->dReg;
-      t_PC = tr_entry->PC;
-      t_Addr = tr_entry->Addr;
-    }  
 
-    
-
-    // can only insert new instr if no hazards, b/c otherwise pipeline is stalled
-    stages[0] = *tr_entry; 
-
-// SIMULATION OF A SINGLE CYCLE cpu IS TRIVIAL - EACH INSTRUCTION IS EXECUTED
-// IN ONE CYCLE
 
     if (trace_view_on) {/* print the executed instruction if trace_view_on=1 */
-      switch(tr_entry->type) {
+      switch(out->type) {
         case ti_NOP:
           printf("[cycle %d] NOP\n:",cycle_number) ;
           break;

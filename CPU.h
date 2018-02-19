@@ -13,7 +13,8 @@ enum trace_item_type {
 	ti_JTYPE,
 	ti_SPECIAL,
 	ti_JRTYPE,
-	ti_FLUSHED
+	ti_FLUSHED,
+	ti_EMPTY
 };
 
 enum stage_type {
@@ -127,45 +128,46 @@ int write_trace(struct trace_item item, char *fname)
 	return 1;
 }
 
-int push_stages_from(struct trace_item stages[], int pushFrom, struct trace_item *out) {
+int push_stages_from(struct trace_item *stages[], int pushFrom, struct trace_item *out) {
 	out = stages[WB];
 	for (int i = WB; i >= pushFrom; i--) {
 		stages[i] = stages[i-1];	// push non-stalled instrs down pipeline
 	}
-	stages[pushFrom].type = ti_NOP;	// insert nop to stall pipeline
+	stages[pushFrom]->type = ti_NOP;	// insert nop to stall pipeline
 	return 0;
 }
 
-int branch_check(struct trace_item stages[], int mode);
+int branch_check(struct trace_item *stages[], int mode);
 
-int hazard_detect(struct trace_item stages[], int prediction_mode, struct trace_item* out) {
+int hazard_detect(struct trace_item *stages[], int prediction_mode, struct trace_item* out) {
 	int detected = 0;
+	
+	// check for control hazard (if hazard while branch/jump in EX, flush first 3 instrs)
+	if (stages[EX]->type == ti_BRANCH) {
+		detected = branch_check(stages, prediction_mode);
+	}
+
 	// check for structural hazard (instr trying to WB while decoding)
-	if ((stages[WB].type >= ti_RTYPE) && (stages[WB].type <= ti_LOAD)) {
-		// Stall IF1, IF2, ID
-		push_stages_from(stages, EX);
+	else if ((stages[WB]->type >= ti_RTYPE) && (stages[WB]->type <= ti_LOAD)) {
+		printf("struct hazard detected");
+		push_stages_from(stages, EX, out);
 		detected = hz_STRUCT;
 	}
 
 	// check for data hazard (LW in EX/MEM1 or MEM1/MEM2 w/ data dependency in ID/EX)
-	if (stages[EX].type == ti_LOAD) { 	// which stage to check from depends on how we load the pipeline
-		if (stages[EX].dReg == stages[ID].dReg) {
-			// Stall IF1, IF2, ID
-			push_stages_from(stages, EX);
+	else if (stages[EX]->type == ti_LOAD) { 	// which stage to check from depends on how we load the pipeline
+		if (stages[EX]->dReg == stages[ID]->dReg) {
+			//printf("data hazard detected");
+			push_stages_from(stages, EX, out);
 			detected = hz_DATA1;
 		}
 	}
-	else if (stages[MEM1].type == ti_LOAD) {
-		if (stages[MEM1].dReg == stages[ID].dReg) {
-			// Stall IF1, IF2, ID
-			push_stages_from(stages, EX);
+	else if (stages[MEM1]->type == ti_LOAD) {
+		if (stages[MEM1]->dReg == stages[ID]->dReg) {
+			//printf("data hazard detected");
+			push_stages_from(stages, EX, out);
 			detected = hz_DATA2;
 		}
-	}
-
-	// check for control hazard (if hazard while branch/jump in EX, flush first 3 instrs)
-	if (stages[EX].type == ti_BRANCH) {
-		detected = branch_check(stages, prediction_mode);
 	}
 
 	return detected;
@@ -186,15 +188,15 @@ enum branch_result_2bit{
     br2_TAKEN
 };
 
-const struct trace_item FLUSHED = { .type = ti_FLUSHED };
+struct trace_item FLUSHED = { .type = ti_FLUSHED };
 
 static int* prediction_table;
 static int table_size;
 
-int flush_stages(struct trace_item stages[]);
-int check_branch(const struct trace_item stages[]);
-int get_prediction(const struct trace_item stages[], int mode);
-int check_store_prediction(const struct trace_item stages[], int branch_result, int mode);
+int flush_stages(struct trace_item *stages[]);
+int check_branch(struct trace_item *stages[]);
+int get_prediction(struct trace_item *stages[], int mode);
+int check_store_prediction(struct trace_item *stages[], int branch_result, int mode);
 
 void set_up_table(int size)
 {
@@ -204,17 +206,17 @@ void set_up_table(int size)
 
 // predicts whether a branch will be taken, affecting what gets loaded into the pipeline
 // 0 -> not taken, 1 -> taken
-int branch_predict(struct trace_item stages[], int mode)
+int branch_predict(struct trace_item *stages[], int mode)
 {
-    if (stages[0].type == ti_BRANCH)
+    if (stages[0]->type == ti_BRANCH)
         return get_prediction(stages, mode);
     return 1;
 }
 
 // checks the prediction stored and flushes IF1/2 and ID
-int branch_check(struct trace_item stages[], int mode)
+int branch_check(struct trace_item *stages[], int mode)
 {
-    if (stages[3].type == ti_BRANCH)
+    if (stages[3]->type == ti_BRANCH)
     {
         int branch_result = check_branch(stages);
         if (!check_store_prediction(stages, branch_result, mode))
@@ -228,20 +230,20 @@ int branch_check(struct trace_item stages[], int mode)
 /*Utility Methods*/
 
 // flushes stages in the event of an incorrect prediction
-int flush_stages(struct trace_item stages[])
+int flush_stages(struct trace_item *stages[])
 {
     for (int i = 0; i < 4; i++){
-        stages[i] = FLUSHED;
+        stages[i] = &FLUSHED;
     }
 
     return 0;
 }
 
 // Returns 1 if to be taken, 0 if not to be taken
-int check_branch(const struct trace_item stages[])
+int check_branch(struct trace_item *stages[])
 {
-    int target_addr = stages[3].Addr;
-    int next_addr = stages[2].PC;
+    int target_addr = stages[3]->Addr;
+    int next_addr = stages[2]->PC;
 
     if (target_addr == next_addr)
         return -1;
@@ -255,11 +257,11 @@ int hash_for_table(int addr)
 }
 
 // Gets the prediction for this branch or stores a new one
-int get_prediction(const struct trace_item stages[], int mode)
+int get_prediction(struct trace_item *stages[], int mode)
 {
     int addr;
     if (mode != 0) 
-        addr = hash_for_table(stages[0].PC);
+        addr = hash_for_table(stages[0]->PC);
     
     switch (mode){
         case 0:
@@ -274,9 +276,9 @@ int get_prediction(const struct trace_item stages[], int mode)
 
 // The prediction in order to determine flushing
 // Returns -1 if prediction was correct, 0 if not
-int check_store_prediction(const struct trace_item stages[], int branch_result, int mode)
+int check_store_prediction(struct trace_item *stages[], int branch_result, int mode)
 {
-    int addr = hash_for_table(stages[0].PC);
+    int addr = hash_for_table(stages[0]->PC);
 
     if (mode == 0)
         return branch_result == 0;

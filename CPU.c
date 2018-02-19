@@ -8,10 +8,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <arpa/inet.h>
+#include <Winsock2.h>
 #include "CPU.h" 
 
-struct trace_item stages[7];
+struct trace_item empty = {
+	.type = ti_EMPTY,
+	.sReg_a = 255,
+	.sReg_b = 255,
+	.dReg = 255,
+	.PC = 0,
+	.Addr = 0
+};
+struct trace_item *stages[7] = {&empty, &empty, &empty, &empty, &empty, &empty, &empty};
 
 int main(int argc, char **argv)
 {
@@ -54,19 +62,21 @@ int main(int argc, char **argv)
   trace_init();
 
   while(1) {
-
+  	cycle_number++;
+  	printf("Cycle number: %d\n", cycle_number);
     /* hazard detection */ 
-    int hazard_detected = hazard_detect(stages, prediction_mode);    
+    int hazard_detected = hazard_detect(stages, prediction_mode, out); 
+    //printf("hazard detection done\n");   
     if (hazard_detected == hz_CTRL) 
     	delays = 3;
     /* branch prediction*/
     branch_predict(stages, prediction_mode);
-
+//printf("branch prediction done\n"); 
     if (delays > 0) {
-    	push_stages_from(stages, EX);
+    	push_stages_from(stages, EX, out);
     	delays--;
     }
-    
+
     else if (hazard_detected == 0){
       out = stages[WB];
       for (int i = WB; i > 0; i--){
@@ -76,14 +86,13 @@ int main(int argc, char **argv)
       size = trace_get_item(&tr_entry);
 
       if (!size) {
-        if (stages[WB] == NULL) {
+        if (stages[WB]->type == ti_EMPTY) {
           printf("+ Simulation terminates at cycle : %u\n", cycle_number);
           break;
         }
-        stages[IF1] = NULL;
+        stages[IF1]->type = ti_EMPTY;
       }
       else {
-    	  cycle_number++;
     	  t_type = tr_entry->type;
     	  t_sReg_a = tr_entry->sReg_a;
     	  t_sReg_b = tr_entry->sReg_b;
@@ -95,7 +104,7 @@ int main(int argc, char **argv)
     }
 
 
-    if (trace_view_on) {/* print the executed instruction if trace_view_on=1 */
+    if (trace_view_on && out->type != ti_EMPTY) {/* print the executed instruction if trace_view_on=1 */
       switch(out->type) {
         case ti_NOP:
           printf("[cycle %d] NOP\n:",cycle_number) ;

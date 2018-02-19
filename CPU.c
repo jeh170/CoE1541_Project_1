@@ -30,6 +30,7 @@ int main(int argc, char **argv)
   unsigned int t_Addr = 0;
 
   unsigned int cycle_number = 0;
+  int delays = 0;
 
   if (argc == 1) {
     fprintf(stdout, "\nUSAGE: tv <trace_file> <prediction_mode> <switch - any character>\n");
@@ -56,11 +57,17 @@ int main(int argc, char **argv)
 
     /* hazard detection */ 
     int hazard_detected = hazard_detect(stages, prediction_mode);    
-
+    if (hazard_detected == hz_CTRL) 
+    	delays = 3;
     /* branch prediction*/
     branch_predict(stages, prediction_mode);
 
-    if (hazard_detected == 0){
+    if (delays > 0) {
+    	push_stages_from(stages, EX);
+    	delays--;
+    }
+    
+    else if (hazard_detected == 0){
       out = stages[WB];
       for (int i = WB; i > 0; i--){
     	  stages[i] = stages[i-1];

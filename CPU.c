@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <arpa/inet.h>
+#include <Winsock2.h>
 #include "CPU.h" 
 
 struct trace_item empty = {
@@ -20,8 +20,6 @@ struct trace_item empty = {
 	.Addr = 0
 };
 struct trace_item *stages[7] = {&empty, &empty, &empty, &empty, &empty, &empty, &empty};
-
-
 
 int main(int argc, char **argv)
 {
@@ -65,8 +63,7 @@ int main(int argc, char **argv)
 
   while(1) {
   	cycle_number++;
-    //print_stages(stages);
-  	printf("Cycle number: %d\n", cycle_number);
+  	//printf("Cycle number: %d\n", cycle_number);
     /* hazard detection */ 
     int hazard_detected = hazard_detect(stages, prediction_mode, out); 
     //printf("hazard detection done\n");   

@@ -13,7 +13,6 @@ enum trace_item_type {
 	ti_JTYPE,
 	ti_SPECIAL,
 	ti_JRTYPE,
-	ti_FLUSHED,
 	ti_EMPTY
 };
 
@@ -128,12 +127,55 @@ int write_trace(struct trace_item item, char *fname)
 	return 1;
 }
 
+int print_stages(struct trace_item *stages[])
+{
+  for (int i = 0; i < 7; i++)
+  {
+    switch(stages[i]->type)
+    {
+      case ti_NOP:
+        printf("N ");
+        break;
+      case ti_RTYPE:
+        printf("R ");
+        break;
+	    case ti_ITYPE:
+        printf("I ");
+        break;
+	    case ti_LOAD:
+        printf("L ");
+        break;
+      case ti_STORE:
+        printf("S ");
+        break;
+	    case ti_BRANCH:
+      printf("B ");
+        break;
+      case ti_JTYPE:
+        printf("J ");
+        break;
+      case ti_SPECIAL:
+        printf("SP ");
+        break;
+      case ti_JRTYPE:
+        printf("JR ");
+        break;
+      case ti_EMPTY:
+        printf("E ");
+        break;
+    }
+  }
+  printf("\n");
+}
+
 int push_stages_from(struct trace_item *stages[], int pushFrom, struct trace_item *out) {
 	out = stages[WB];
-	for (int i = WB; i >= pushFrom; i--) {
+	for (int i = WB; i > pushFrom; i--) {
+		printf("L::");
+		//print_stages(stages);
 		stages[i] = stages[i-1];	// push non-stalled instrs down pipeline
 	}
-	stages[pushFrom]->type = ti_NOP;	// insert nop to stall pipeline
+	stages[pushFrom + 1]->type = ti_NOP;	// insert nop to stall pipeline
 	return 0;
 }
 
@@ -188,8 +230,6 @@ enum branch_result_2bit{
     br2_TAKEN
 };
 
-struct trace_item FLUSHED = { .type = ti_FLUSHED };
-
 static int* prediction_table;
 static int table_size;
 
@@ -228,16 +268,6 @@ int branch_check(struct trace_item *stages[], int mode)
 
 
 /*Utility Methods*/
-
-// flushes stages in the event of an incorrect prediction
-int flush_stages(struct trace_item *stages[])
-{
-    for (int i = 0; i < 4; i++){
-        stages[i] = &FLUSHED;
-    }
-
-    return 0;
-}
 
 // Returns 1 if to be taken, 0 if not to be taken
 int check_branch(struct trace_item *stages[])

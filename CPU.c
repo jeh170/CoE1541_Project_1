@@ -343,7 +343,7 @@ struct trace_item stages[7] = {empty, empty, empty, empty, empty, empty, empty};
       size = trace_get_item(&tr_entry);
 
       if (!size) {
-      	printf("%d %d %d", size, stages[WB].type, out.type);
+      	//printf("%d %d %d", size, stages[WB].type, out.type);
         if (stages[WB].type == ti_EMPTY && out.type == ti_EMPTY) {
           printf("+ Simulation terminates at cycle : %u\n", cycle_number);
           break;
